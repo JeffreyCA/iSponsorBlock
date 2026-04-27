@@ -1,10 +1,16 @@
 #import "Headers/iSponsorBlock.h"
 #import <AudioToolbox/AudioToolbox.h>
+#import <objc/runtime.h>
 #import <rootless.h>
 #import "Headers/ColorFunctions.h"
 #import "Headers/SponsorBlockSettingsController.h"
 #import "Headers/SponsorBlockRequest.h"
 #import "Headers/SponsorBlockViewController.h"
+#import "YouTubeHeader/YTSettingsCell.h"
+#import "YouTubeHeader/YTSettingsGroupData.h"
+#import "YouTubeHeader/YTSettingsSectionItem.h"
+#import "YouTubeHeader/YTSettingsSectionItemManager.h"
+#import "YouTubeHeader/YTSettingsViewController.h"
 
 #define LOC(x) [tweakBundle localizedStringForKey:x value:nil table:nil]
 
@@ -510,10 +516,10 @@ void currentVideoTimeDidChange(YTPlayerViewController *self, YTSingleVideoTime *
 - (NSMutableArray *)topControls {
     NSMutableArray <UIView *> *topControls = %orig;
     if (kShowButtonsInPlayer) {
-        [topControls insertObject:self.sponsorBlockButton atIndex:0];
-        if (!kHideStartEndButtonInPlayer) {
+        if (self.sponsorBlockButton)
+            [topControls insertObject:self.sponsorBlockButton atIndex:0];
+        if (!kHideStartEndButtonInPlayer && self.sponsorStartedEndedButton)
             [topControls insertObject:self.sponsorStartedEndedButton atIndex:0];
-        }
     }
     return topControls;
 }
@@ -845,9 +851,8 @@ static void updateSkipSegments(YTInlinePlayerBarContainerView *self) {
 }
 %end
 
-
-%hook YTPlayerView
-//https://stackoverflow.com/questions/11770743/capturing-touches-on-a-subview-outside-the-frame-of-its-superview-using-hittest
+/*
+Commented out to prevent touch hijacking the in-app miniplayer.
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     if (self.clipsToBounds || self.hidden || self.alpha == 0) {
         return nil;
@@ -861,6 +866,7 @@ static void updateSkipSegments(YTInlinePlayerBarContainerView *self) {
     return nil;
 }
 %end
+*/
 %end
 
 %group Cercube
@@ -1120,6 +1126,8 @@ AVQueuePlayer *queuePlayer;
 %end
 %end
 
+/*
+Commented out in favour of a dedicated Settings entry below.
 %group JustSettings
 %hook YTHeaderViewController
 %property (retain, nonatomic) YTQTMButton *sponsorBlockButton;
@@ -1179,6 +1187,94 @@ static NSArray *filterButtons(YTRightNavigationButtons *self, BOOL visibleOnly) 
     return filterButtons(self, YES);
 }
 %end
+%end
+*/
+
+%group Settings
+
+static const NSInteger kSponsorBlockSection = 1081;
+
+@interface YTSettingsSectionItemManager (iSB)
+- (void)updateSponsorBlockSectionWithEntry:(id)entry;
+@end
+
+%hook YTSettingsGroupData
+
+- (NSArray <NSNumber *> *)orderedCategories {
+    if (self.type != 1 || class_getClassMethod(objc_getClass("YTSettingsGroupData"), @selector(tweaks)))
+        return %orig;
+    NSMutableArray *mutableCategories = %orig.mutableCopy;
+    [mutableCategories insertObject:@(kSponsorBlockSection) atIndex:0];
+    return mutableCategories.copy;
+}
+
+%end
+
+%hook YTAppSettingsPresentationData
+
++ (NSArray <NSNumber *> *)settingsCategoryOrder {
+    NSArray <NSNumber *> *order = %orig;
+    NSUInteger insertIndex = [order indexOfObject:@(1)];
+    if (insertIndex != NSNotFound) {
+        NSMutableArray <NSNumber *> *mutableOrder = [order mutableCopy];
+        [mutableOrder insertObject:@(kSponsorBlockSection) atIndex:insertIndex + 1];
+        order = mutableOrder.copy;
+    }
+    return order;
+}
+
+%end
+
+static void presentSponsorBlockSettings() {
+    UIViewController *presenter = [[UIApplication sharedApplication] delegate].window.rootViewController;
+    while (presenter.presentedViewController) {
+        UIViewController *presented = presenter.presentedViewController;
+        if ([presented isKindOfClass:[UINavigationController class]] &&
+            [((UINavigationController *)presented).viewControllers.firstObject isKindOfClass:[SponsorBlockSettingsController class]]) {
+            return;
+        }
+        presenter = presented;
+    }
+    SponsorBlockSettingsController *settingsController = [[SponsorBlockSettingsController alloc] init];
+    UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:settingsController];
+    [presenter presentViewController:navigationController animated:YES completion:nil];
+}
+
+%hook YTSettingsSectionItemManager
+
+%new(v@:@)
+- (void)updateSponsorBlockSectionWithEntry:(id)entry {
+    YTSettingsViewController *delegate = [self valueForKey:@"_dataDelegate"];
+    NSMutableArray *sectionItems = [NSMutableArray array];
+    YTSettingsSectionItem *openItem = [%c(YTSettingsSectionItem)
+        itemWithTitle:@"Settings"
+        accessibilityIdentifier:nil
+        detailTextBlock:nil
+        selectBlock:^BOOL (YTSettingsCell *cell, NSUInteger idx) {
+            presentSponsorBlockSettings();
+            return YES;
+        }];
+    [sectionItems addObject:openItem];
+    NSString *title = @"iSponsorBlock";
+    if ([delegate respondsToSelector:@selector(setSectionItems:forCategory:title:icon:titleDescription:headerHidden:)]) {
+        YTIIcon *icon = [%c(YTIIcon) new];
+        icon.iconType = YT_CANCEL;
+        [delegate setSectionItems:sectionItems forCategory:kSponsorBlockSection title:title icon:icon titleDescription:nil headerHidden:NO];
+    } else {
+        [delegate setSectionItems:sectionItems forCategory:kSponsorBlockSection title:title titleDescription:nil headerHidden:NO];
+    }
+}
+
+- (void)updateSectionForCategory:(NSUInteger)category withEntry:(id)entry {
+    if (category == kSponsorBlockSection) {
+        [self updateSponsorBlockSectionWithEntry:entry];
+        return;
+    }
+    %orig;
+}
+
+%end
+
 %end
 
 static void loadPrefs() {
@@ -1296,7 +1392,7 @@ static void prefsChanged(CFNotificationCenterRef center, void *observer, CFStrin
 %ctor {
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)prefsChanged, CFSTR("com.galacticdev.isponsorblockprefs.changed"), NULL, CFNotificationSuspensionBehaviorCoalesce);
     %init(LateLoad);
-    %init(JustSettings);
+    %init(Settings); // was %init(JustSettings)
 }
 
 %dtor {
