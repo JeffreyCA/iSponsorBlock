@@ -1,13 +1,8 @@
 # iSponsorBlock
-A jailbreak tweak that implements the SponsorBlock API to skip sponsorships in YouTube videos.
 
-More info about SponsorBlock and the API used can be found [here](https://sponsor.ajay.app).
+A tweak that implements the [SponsorBlock](https://sponsor.ajay.app) API to skip sponsorships in YouTube videos.
 
-This tweak has been tested on the latest YouTube version (21.x.x) and supports, at least, down to version 17.30.1.
+Fork of [Galactic-Dev/iSponsorBlock](https://github.com/Galactic-Dev/iSponsorBlock) with the following changes:
 
-# Installation
-
-Add the following repository: https://repo.icrazeios.com
-
-# Customization
-To access this tweaks settings open the YouTube app, and there should be a button in the top right, like in this image: https://imgur.com/lLpfXue.
+- **Settings moved to YouTube's Settings page** - Relocated from a nav-bar button to a native **iSponsorBlock** section in YouTube's Settings, fixing layout issues on smaller devices.
+- **Fixed touch hijacking in the miniplayer** - Miniplayer can now be dragged around and tapping it consistently maximizes view.
