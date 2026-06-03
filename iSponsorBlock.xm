@@ -1155,7 +1155,7 @@ static NSArray *filterButtons(YTRightNavigationButtons *self, BOOL visibleOnly) 
     YTQTMButton *isbButton = [buttonsTable objectForKey:@(isbIndex)];
     if (isbButton && (!visibleOnly || !isbButton.hidden))
         [buttons addObject:isbButton];
-    for (NSUInteger i = 0; i < 7; ++i) {
+    for (NSUInteger i = 0; i < 10; ++i) {
         YTQTMButton *button = [buttonsTable objectForKey:@(i)];
         if (button && (!visibleOnly || !button.hidden))
             [buttons addObject:button];
@@ -1165,9 +1165,6 @@ static NSArray *filterButtons(YTRightNavigationButtons *self, BOOL visibleOnly) 
         if (!visibleOnly || !button.hidden)
             [buttons addObject:button];
     }
-    YTQTMButton *button7 = [buttonsTable objectForKey:@7];
-    if (button7 && (!visibleOnly || !button7.hidden))
-        [buttons addObject:button7];
     return buttons;
 }
 
