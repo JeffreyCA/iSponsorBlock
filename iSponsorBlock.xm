@@ -828,7 +828,7 @@ static void updateSkipSegments(YTInlinePlayerBarContainerView *self) {
     %orig;
     YTPlayerView *playerView = (YTPlayerView *)self.playerViewController.view;
     YTMainAppVideoPlayerOverlayView *overlayView = (YTMainAppVideoPlayerOverlayView *)playerView.overlayView;
-    if (!self.playerViewController.isPlayingAd && overlayView.controlsOverlayView.isDisplayingSponsorBlockViewController && [overlayView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)]) {
+    if ([overlayView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)] && !self.playerViewController.isPlayingAd && overlayView.controlsOverlayView.isDisplayingSponsorBlockViewController) {
         [overlayView.controlsOverlayView presentSponsorBlockViewController];
     }
 }
@@ -841,7 +841,7 @@ static void updateSkipSegments(YTInlinePlayerBarContainerView *self) {
     %orig;
     YTPlayerView *playerView = (YTPlayerView *)self.playerViewController.view;
     YTMainAppVideoPlayerOverlayView *overlayView = (YTMainAppVideoPlayerOverlayView *)playerView.overlayView;
-    if (!self.playerViewController.isPlayingAd && overlayView.controlsOverlayView.isDisplayingSponsorBlockViewController && [overlayView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)]) {
+    if ([overlayView isKindOfClass:%c(YTMainAppVideoPlayerOverlayView)] && !self.playerViewController.isPlayingAd && overlayView.controlsOverlayView.isDisplayingSponsorBlockViewController) {
         [overlayView.controlsOverlayView presentSponsorBlockViewController];
     }
 }
