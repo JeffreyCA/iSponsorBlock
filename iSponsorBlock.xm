@@ -485,8 +485,8 @@ void currentVideoTimeDidChange(YTPlayerViewController *self, YTSingleVideoTime *
         CGFloat padding = [[self class] topButtonAdditionalPadding];
         self.sponsorBlockButton = [self buttonWithImage:[UIImage imageWithContentsOfFile:[tweakBundle pathForResource:@"PlayerInfoIconSponsorBlocker256px-20@2x" ofType:@"png"]] accessibilityLabel:@"iSponsorBlock" verticalContentPadding:padding];
         [self.sponsorBlockButton addTarget:self action:@selector(sponsorBlockButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        // Full alpha like native buttons; the first overlay appearance never calls setTopOverlayVisible:.
         self.sponsorBlockButton.hidden = YES;
-        self.sponsorBlockButton.alpha = 0;
 
         if (!kHideStartEndButtonInPlayer) {
             BOOL isStart = self.playerViewController.userSkipSegments.lastObject.endTime != -1;
@@ -494,7 +494,6 @@ void currentVideoTimeDidChange(YTPlayerViewController *self, YTSingleVideoTime *
             self.sponsorStartedEndedButton = [self buttonWithImage:[UIImage imageWithContentsOfFile:startedEndedImagePath] accessibilityLabel:isStart ? @"iSponsorBlock start" : @"iSponsorBlock end" verticalContentPadding:padding];
             [self.sponsorStartedEndedButton addTarget:self action:@selector(sponsorStartedEndedButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
             self.sponsorStartedEndedButton.hidden = YES;
-            self.sponsorStartedEndedButton.alpha = 0;
         }
 
         @try {
@@ -525,16 +524,13 @@ void currentVideoTimeDidChange(YTPlayerViewController *self, YTSingleVideoTime *
 }
 
 - (void)setTopOverlayVisible:(BOOL)visible isAutonavCanceledState:(BOOL)canceledState {
-    if (self.isDisplayingSponsorBlockViewController) {
-        %orig(NO, canceledState);
-        self.sponsorBlockButton.imageView.hidden = YES;
-        self.sponsorStartedEndedButton.imageView.hidden = YES;
-        return;
-    }
-
-    self.sponsorBlockButton.alpha = canceledState || !visible ? 0:1;
-    self.sponsorStartedEndedButton.alpha = canceledState || !visible ? 0:1;
-    %orig;
+    if (self.isDisplayingSponsorBlockViewController)
+        visible = NO;
+    // Only touch alpha; hiding imageView was never undone.
+    CGFloat alpha = visible && !canceledState ? 1 : 0;
+    self.sponsorBlockButton.alpha = alpha;
+    self.sponsorStartedEndedButton.alpha = alpha;
+    %orig(visible, canceledState);
 }
 
 %new(v@:@)
